@@ -3,7 +3,7 @@
 -- User balances table
 CREATE TABLE IF NOT EXISTS user_balances (
     user_id TEXT PRIMARY KEY,
-    balance NUMERIC(10, 2) NOT NULL DEFAULT 0
+    balance NUMERIC(12, 2) NOT NULL DEFAULT 0
 );
 
 -- Caught fish table

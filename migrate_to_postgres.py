@@ -30,19 +30,27 @@ def migrate_economy(sqlite_conn, pg_conn):
     print("Migrating economy data...")
     
     sqlite_cursor = sqlite_conn.cursor()
-    pg_cursor = pg_conn.cursor()
     
     sqlite_cursor.execute("SELECT user_id, balance FROM user_balances")
     rows = sqlite_cursor.fetchall()
     
+    migrated = 0
+    skipped = 0
     for row in rows:
-        pg_cursor.execute(
-            "INSERT INTO user_balances (user_id, balance) VALUES (%s, %s) ON CONFLICT (user_id) DO UPDATE SET balance = EXCLUDED.balance",
-            row
-        )
+        try:
+            pg_cursor = pg_conn.cursor()
+            pg_cursor.execute(
+                "INSERT INTO user_balances (user_id, balance) VALUES (%s, %s) ON CONFLICT (user_id) DO UPDATE SET balance = EXCLUDED.balance",
+                row
+            )
+            pg_conn.commit()
+            migrated += 1
+        except Exception as e:
+            pg_conn.rollback()
+            print(f"  Skipping {row[0]} (balance: {row[1]}): {str(e).split('DETAIL')[0].strip()}")
+            skipped += 1
     
-    pg_conn.commit()
-    print(f"Migrated {len(rows)} user balances")
+    print(f"Migrated {migrated} user balances (skipped {skipped})")
 
 
 def migrate_fish(sqlite_conn, pg_conn):
@@ -100,7 +108,7 @@ def migrate_status_effects(sqlite_conn, pg_conn):
     sqlite_cursor = sqlite_conn.cursor()
     pg_cursor = pg_conn.cursor()
     
-    sqlite_cursor.execute("SELECT user_id, effect_name, expiration_time FROM status_effects")
+    sqlite_cursor.execute("SELECT user_id, effect_id, expires_at FROM user_status_effects")
     rows = sqlite_cursor.fetchall()
     
     for row in rows:
