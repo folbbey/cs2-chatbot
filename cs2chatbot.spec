@@ -10,8 +10,16 @@ a = Analysis(
         ('util', 'util'),  # Include the util directory
         ('modules', 'modules'),  # Include the modules directory
         ('cmds', 'cmds'),  # Include the cmds directory
+        ('client', 'client'),  # Include the client directory
+        ('server', 'server'),  # Include the server directory
     ],
-    hiddenimports=['sqlite3'],
+    hiddenimports=[
+        'sqlite3',
+        'flask',
+        'requests',
+        'client.adapters.cs2',
+        'server',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

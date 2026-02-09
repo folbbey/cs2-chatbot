@@ -7,3 +7,5 @@ pyinstaller
 PyQt6
 screeninfo
 thefuzz
+flask
+requests
