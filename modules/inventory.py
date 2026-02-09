@@ -1,10 +1,10 @@
 import os
 import random
-import sqlite3
 import json
 import sys
 from thefuzz import process, fuzz
 
+from util.database import DatabaseConnection
 from util.config import get_config_path
 from util.module_registry import module_registry
 from modules.economy import Economy
@@ -14,11 +14,6 @@ class Inventory:
     
     def __init__(self):
         appdata_dir = os.path.dirname(get_config_path())
-        self.db_path = os.path.join(appdata_dir if hasattr(sys, '_MEIPASS') else "db", "inventory.db")
-        try:
-            self.initialize_database()
-        except Exception as e:
-            raise Exception(f"Error initializing database: {e}")
         cases_path = os.path.join(appdata_dir, "cases.json") if hasattr(sys, '_MEIPASS') else os.path.join("modules", "data", "cases.json")
         try:
             with open(cases_path, mode="r", encoding="utf-8") as file:
@@ -27,79 +22,49 @@ class Inventory:
             raise Exception(f"Error loading cases: {e}")
         self.economy: Economy = module_registry.get_module("economy")
 
-    def initialize_database(self):
-        """Initialize the SQLite database for storing user inventories."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS user_inventory (
-                user_id TEXT NOT NULL,
-                item_name TEXT NOT NULL,
-                item_data TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                PRIMARY KEY (user_id, item_name)
-            )
-        """)
-        cursor.execute("PRAGMA table_info(user_inventory)")
-        columns = [column[1] for column in cursor.fetchall()]
-        # Check if the item_data column exists, and add it if necessary
-        if "item_data" not in columns:
-            cursor.execute("ALTER TABLE user_inventory ADD COLUMN item_data TEXT DEFAULT '{}'")
-        conn.commit()
-        conn.close()
-
     def add_item(self, user_id, item_name, item_data, quantity=1):
         """Add an item to the user's inventory."""
         item_data = item_data if isinstance(item_data, str) else json.dumps(item_data)
         # replace any escape characters in item_data
         item_data = item_data.replace("\\\\", "\\").replace("\\'", "'")
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO user_inventory (user_id, item_name, item_data, quantity)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(user_id, item_name) DO UPDATE SET quantity = quantity + ?
-        """, (user_id, item_name, item_data, quantity, quantity))
-        conn.commit()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                INSERT INTO user_inventory (user_id, item_name, item_data, quantity)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT(user_id, item_name) DO UPDATE SET quantity = EXCLUDED.quantity + %s
+            """, (user_id, item_name, item_data, quantity, quantity))
         return f"Added {quantity} x {item_name} ({item_data}) to {user_id}'s inventory."
 
     def remove_item(self, user_id, item_name, quantity=1):
         """Remove an item from the user's inventory."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT quantity FROM user_inventory
-            WHERE user_id = ? AND item_name = ? COLLATE NOCASE
-        """, (user_id, item_name))
-        result = cursor.fetchone()
-        if not result or result[0] < quantity:
-            conn.close()
-            return f"Not enough {item_name} in inventory to remove."
-        
-        cursor.execute("""
-            UPDATE user_inventory
-            SET quantity = quantity - ?
-            WHERE user_id = ? AND item_name = ?
-        """, (quantity, user_id, item_name))
-        cursor.execute("""
-            DELETE FROM user_inventory
-            WHERE user_id = ? AND item_name = ? AND quantity <= 0
-        """, (user_id, item_name))
-        conn.commit()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT quantity FROM user_inventory
+                WHERE user_id = %s AND item_name ILIKE %s
+            """, (user_id, item_name))
+            result = cursor.fetchone()
+            if not result or result[0] < quantity:
+                return f"Not enough {item_name} in inventory to remove."
+            
+            cursor.execute("""
+                UPDATE user_inventory
+                SET quantity = quantity - %s
+                WHERE user_id = %s AND item_name = %s
+            """, (quantity, user_id, item_name))
+            cursor.execute("""
+                DELETE FROM user_inventory
+                WHERE user_id = %s AND item_name = %s AND quantity <= 0
+            """, (user_id, item_name))
         return f"Removed {quantity} x {item_name} from {user_id}'s inventory."
 
     def get_item_by_type(self, playername, item_type):
         """Get items of a specific type from the user's inventory."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT item_name, item_data, quantity FROM user_inventory
-            WHERE user_id = ?
-        """, (playername,))
-        items = cursor.fetchall()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT item_name, item_data, quantity FROM user_inventory
+                WHERE user_id = %s
+            """, (playername,))
+            items = cursor.fetchall()
         if not items:
             return None
         found_items = []
@@ -116,14 +81,12 @@ class Inventory:
 
     def list_inventory(self, user_id):
         """List all items in the user's inventory."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT item_name, item_data, quantity FROM user_inventory
-            WHERE user_id = ?
-        """, (user_id,))
-        items = cursor.fetchall()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT item_name, item_data, quantity FROM user_inventory
+                WHERE user_id = %s
+            """, (user_id,))
+            items = cursor.fetchall()
         if not items:
             return None
         return [{'name': item[0], 'data': item[1], 'quantity': item[2]} for item in items]
@@ -178,14 +141,12 @@ class Inventory:
 
     def get_item_by_name(self, user_id, item_name):
         """Get an item by its name from the user's inventory."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT item_name, item_data, quantity FROM user_inventory
-            WHERE user_id = ? AND item_name = ? COLLATE NOCASE
-        """, (user_id, item_name))
-        result = cursor.fetchone()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT item_name, item_data, quantity FROM user_inventory
+                WHERE user_id = %s AND item_name ILIKE %s
+            """, (user_id, item_name))
+            result = cursor.fetchone()
         if not result:
             return None
         return {
@@ -196,14 +157,12 @@ class Inventory:
 
     def get_item_by_name_fuzzy(self, user_id, item_name):
         """Get an item by its name from the user's inventory using fuzzy matching."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT item_name FROM user_inventory
-            WHERE user_id = ?
-        """, (user_id,))
-        items = cursor.fetchall()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT item_name FROM user_inventory
+                WHERE user_id = %s
+            """, (user_id,))
+            items = cursor.fetchall()
         
         if not items:
             return None

@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from util.config import load_config, copy_files_to_appdata
 from util.commands import command_registry
 from util.module_registry import module_registry
+from util.database import initialize_pool, close_pool
 
 
 def resource_path(relative_path):
@@ -47,6 +48,15 @@ class BotServer:
         # Load configuration
         self.config = load_config()
         self.prefix = self.config.get("command_prefix", "@")
+        
+        # Initialize database connection pool
+        self.logger.info("Initializing database connection pool...")
+        try:
+            initialize_pool()
+            self.logger.info("Database connection pool initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize database pool: {e}")
+            raise
         
         # Initialize command and module registries
         self.commands = command_registry
@@ -119,7 +129,9 @@ class BotServer:
                 command_time = time.time() - command_start
                 self.logger.info(f"Command execution took {command_time:.4f}s")
             except Exception as e:
+                import traceback
                 self.logger.error(f"Error executing command: {e}")
+                self.logger.error(f"Traceback: {traceback.format_exc()}")
         
         # Return collected responses
         responses = self._response_queue

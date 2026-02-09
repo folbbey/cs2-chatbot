@@ -1,18 +1,15 @@
-import sqlite3
 import json
 import os
 import sys
 from time import time
 
+from util.database import DatabaseConnection
 from util.config import get_config_path
 from util.module_registry import module_registry
 
 class StatusEffects:
     def __init__(self):
         self.status_effect_data: dict = self.load_status_effects()
-        appdata_dir = os.path.dirname(get_config_path())
-        self.db_path = os.path.join(appdata_dir if hasattr(sys, '_MEIPASS') else "db", "status_effects.db")
-        self.initialize_database()
 
     def load_status_effects(self):
         """Load status effects data from the configuration file."""
@@ -23,22 +20,6 @@ class StatusEffects:
                 return json.load(file)
         except FileNotFoundError:
             return []
-        
-    def initialize_database(self):
-        """Initialize the SQLite database for storing status effects."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS user_status_effects (
-                user_id TEXT NOT NULL,
-                effect_id TEXT NOT NULL,
-                expires_at INTEGER NOT NULL,
-                PRIMARY KEY (user_id, effect_id)
-            )
-        """)
-
-        conn.commit()
-        conn.close()
 
     def find_effect(self, module_id, effect_id):
         """Find an effect data by its name."""
@@ -57,9 +38,6 @@ class StatusEffects:
 
     def add_effect(self, playername, effect_name):
         """Add a status effect to the user."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         module_id, effect_id = effect_name.split(".", 1)
         effect_data = self.find_effect(module_id, effect_id)
         if effect_data is None:
@@ -70,37 +48,36 @@ class StatusEffects:
         print(active_effects)
         existing_effect = next((e for e in active_effects if e["effect_id"] == effect_id), None)
         print(existing_effect)
-        if existing_effect:
-            duration = existing_effect["duration"]
-            # add the duration to the existing effect
-            new_expires_at = int(time()) + duration + effect_data["duration"]
-            cursor.execute("""
-                UPDATE user_status_effects
-                SET expires_at = ?
-                WHERE user_id = ? AND effect_id = ?
-            """, (new_expires_at, playername, effect_name))
-        else:
-            # add a new effect
-            expires_at = int(time()) + effect_data["duration"]
-            cursor.execute("""
-                INSERT INTO user_status_effects (user_id, effect_id, expires_at)
-                VALUES (?, ?, ?)
-            """, (playername, effect_name, expires_at))
-        conn.commit()
-        conn.close()
+        
+        with DatabaseConnection() as cursor:
+            if existing_effect:
+                duration = existing_effect["duration"]
+                # add the duration to the existing effect
+                new_expires_at = int(time()) + duration + effect_data["duration"]
+                cursor.execute("""
+                    UPDATE status_effects
+                    SET expiration_time = %s
+                    WHERE user_id = %s AND effect_name = %s
+                """, (new_expires_at, playername, effect_name))
+            else:
+                # add a new effect
+                expires_at = int(time()) + effect_data["duration"]
+                cursor.execute("""
+                    INSERT INTO status_effects (user_id, effect_name, expiration_time)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (user_id, effect_name) DO UPDATE SET expiration_time = EXCLUDED.expiration_time
+                """, (playername, effect_name, expires_at))
 
         return True
     
     def get_effects(self, playername):
         """Get all active status effects for a user."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT effect_id, expires_at FROM user_status_effects
-            WHERE user_id = ?
-        """, (playername,))
-        effects = cursor.fetchall()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT effect_name, expiration_time FROM status_effects
+                WHERE user_id = %s
+            """, (playername,))
+            effects = cursor.fetchall()
 
         active_effect_names = []
         for effect_id, expires_at in effects:
@@ -121,15 +98,11 @@ class StatusEffects:
     
     def remove_effect(self, playername, effect_id):
         """Remove a status effect from the user."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            DELETE FROM user_status_effects
-            WHERE user_id = ? AND effect_id = ?
-        """, (playername, effect_id))
-        conn.commit()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                DELETE FROM status_effects
+                WHERE user_id = %s AND effect_name = %s
+            """, (playername, effect_id))
 
         return True
 

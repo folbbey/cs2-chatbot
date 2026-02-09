@@ -1,9 +1,9 @@
 import random
-import sqlite3
 import json
 import os
 import sys
 
+from util.database import DatabaseConnection
 from util.config import get_config_path
 from util.module_registry import module_registry
 from modules.inventory import Inventory as InventoryModule
@@ -13,9 +13,6 @@ class Fishing:
     load_after = ["inventory", "economy"]  # Load after the inventory and economy modules
     def __init__(self):
         self.fish_data = self.load_fish_data()
-        appdata_dir = os.path.dirname(get_config_path())  # Get the app data directory
-        self.db_path = os.path.join(appdata_dir if hasattr(sys, '_MEIPASS') else "db", "fish.db")
-        self.initialize_database()
         self.inventory: InventoryModule = module_registry.get_module("inventory")  # Retrieve the Inventory module from the module registry
         self.status_effects: StatusEffectsModule = module_registry.get_module("status_effects")  # Retrieve the StatusEffects module from the module registry
 
@@ -28,34 +25,6 @@ class Fishing:
                 return json.load(file)
         except FileNotFoundError:
             return []
-
-    def initialize_database(self):
-        """Initialize the SQLite database for storing caught fish."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS caught_fish (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                weight REAL NOT NULL,
-                price REAL NOT NULL,
-                bait INTEGER DEFAULT 0
-            )
-        """)
-
-        # Create bait column if it doesn't exist
-        cursor.execute("""
-            PRAGMA table_info(caught_fish)
-        """)
-        columns = [column[1] for column in cursor.fetchall()]
-        if "bait" not in columns:
-            cursor.execute("""
-                ALTER TABLE caught_fish ADD COLUMN bait INTEGER DEFAULT 0
-            """)
-
-        conn.commit()
-        conn.close()
 
     def calculate_miss_chance(self, playername):
         """
@@ -114,22 +83,19 @@ class Fishing:
             return None
 
         # Check the current number of fish in the user's sack
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT COUNT(*)
-            FROM caught_fish
-            WHERE user_id = ?
-        """, (user_id,))
-        fish_count = cursor.fetchone()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM caught_fish
+                WHERE user_id = %s
+            """, (user_id,))
+            fish_count = cursor.fetchone()
 
         # Convert fish_count to an integer
         fish_count = int(fish_count[0]) if fish_count else 0
 
         # Enforce fish limit
         sack_size = self.calculate_sack_size(user_id)  # Get the sack size
-        conn.close()
-
         if sack_size > 0 and fish_count >= sack_size:
             return {"type": "error", "message": f"Your sack can only hold {sack_size} fish."}
 
@@ -144,14 +110,11 @@ class Fishing:
             # Remove the bait from the sack
             self.remove_fish_from_sack(user_id, bait["id"])
             # Remove the bait from the database
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
-                DELETE FROM caught_fish
-                WHERE id = ?
-            """, (bait["id"],))
-            conn.commit()
-            conn.close()
+            with DatabaseConnection() as cursor:
+                cursor.execute("""
+                    DELETE FROM caught_fish
+                    WHERE id = %s
+                """, (bait["id"],))
 
             # Check the rarity of the bait
             bait_rarity = bait.get("rarity", "Common")
@@ -218,39 +181,30 @@ class Fishing:
 
     def add_fish_to_db(self, user_id, name, weight, price):
         """Add a caught fish to the database."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with DatabaseConnection() as cursor:
 
         # Add the new fish to the database
-        cursor.execute("""
-            INSERT INTO caught_fish (user_id, name, weight, price)
-            VALUES (?, ?, ?, ?)
-        """, (user_id, name, weight, price))
-        conn.commit()
-        conn.close()
+            cursor.execute("""
+                INSERT INTO caught_fish (user_id, name, weight, price)
+                VALUES (%s, %s, %s, %s)
+            """, (user_id, name, weight, price))
         return f"You caught a {name} weighing {weight} lbs worth ${price}!"
 
     def get_sack(self, user_id):
         """Retrieve all fish caught by the user."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, name, weight, price, bait
-            FROM caught_fish
-            WHERE user_id = ?
-        """, (user_id,))
-        result = cursor.fetchall()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT id, name, weight, price, bait
+                FROM caught_fish
+                WHERE user_id = %s
+            """, (user_id,))
+            result = cursor.fetchall()
         return [{"id": row[0], "name": row[1], "weight": row[2], "price": row[3], "bait": row[4]} for row in result]
 
     def clear_sack(self, user_id):
         """Remove all fish caught by the user."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM caught_fish WHERE user_id = ?", (user_id,))
-        conn.commit()
-        conn.close()
-
+        with DatabaseConnection() as cursor:
+            cursor.execute("DELETE FROM caught_fish WHERE user_id = %s", (user_id,))
     def list_fish(self):
         """List all available fish and items."""
         return self.fish_data
@@ -263,33 +217,31 @@ class Fishing:
         :param name: The name of the fish to eat (optional).
         :return: A description of the fish or an error message if the fish is not found.
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with DatabaseConnection() as cursor:
 
-        if name:
-            # Sanitize the name input
-            name = name.strip()
+            if name:
+                # Sanitize the name input
+                name = name.strip()
 
-            # Retrieve the first fish matching the name (case-insensitive) from the database
-            cursor.execute("""
-                SELECT id, name
-                FROM caught_fish
-                WHERE user_id = ? AND LOWER(name) = LOWER(?)
-                LIMIT 1
-            """, (user_id, name))
-        else:
-            # Retrieve the first fish in the sack if no name is provided
-            cursor.execute("""
-                SELECT id, name
-                FROM caught_fish
-                WHERE user_id = ?
-                LIMIT 1
-            """, (user_id,))
-        
-        fish = cursor.fetchone()
+                # Retrieve the first fish matching the name (case-insensitive) from the database
+                cursor.execute("""
+                    SELECT id, name
+                    FROM caught_fish
+                    WHERE user_id = %s AND LOWER(name) = LOWER(%s)
+                    LIMIT 1
+                """, (user_id, name))
+            else:
+                # Retrieve the first fish in the sack if no name is provided
+                cursor.execute("""
+                    SELECT id, name
+                    FROM caught_fish
+                    WHERE user_id = %s
+                    LIMIT 1
+                """, (user_id,))
+            
+            fish = cursor.fetchone()
 
         if not fish:
-            conn.close()
             return "Your sack is empty." if not name else f"There were no '{name}' found in your sack."
 
         fish_id, name = fish
@@ -297,11 +249,8 @@ class Fishing:
         # Remove the fish from the database
         cursor.execute("""
             DELETE FROM caught_fish
-            WHERE id = ?
+            WHERE id = %s
         """, (fish_id,))
-        conn.commit()
-        conn.close()
-
         # Retrieve the fish description from the fish data
         for fish_data in self.fish_data:
             if fish_data["name"].lower() == name.lower():
@@ -324,80 +273,71 @@ class Fishing:
         except ValueError:
             return "Economy module not found."
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with DatabaseConnection() as cursor:
 
-        if name and name.strip().lower() == "all":
-            # Sell all fish in the sack
-            cursor.execute("""
-                SELECT price
-                FROM caught_fish
-                WHERE user_id = ?
-                AND bait = 0
-            """, (user_id,))
-            fish_prices = cursor.fetchall()
-
-            if not fish_prices:
-                conn.close()
-                return "Your sack is empty. You have no fish to sell."
-
-            total_earnings = sum(price[0] for price in fish_prices)
-
-            # Remove all fish from the database
-            cursor.execute("""
-                DELETE FROM caught_fish
-                WHERE user_id = ?
-                AND bait = 0
-            """, (user_id,))
-            conn.commit()
-            conn.close()
-
-            # Add the earnings to the user's balance
-            new_balance = economy.add_balance(user_id, total_earnings)
-
-            return f"You sold all your fish for a total of ${total_earnings:.2f}! Your new balance is ${new_balance:.2f}."
-        else:
-            # Sell the first fish in the sack or the first matching fish
-            if name:
-                # Sanitize the name input
-                name = name.strip()
-
-                # Retrieve the first fish matching the name (case-insensitive) from the database
+            if name and name.strip().lower() == "all":
+                # Sell all fish in the sack
                 cursor.execute("""
-                    SELECT id, name, price
+                    SELECT price
                     FROM caught_fish
-                    WHERE user_id = ? AND LOWER(name) = LOWER(?)
-                    LIMIT 1
-                """, (user_id, name))
-            else:
-                # Retrieve the first fish in the sack if no name is provided
-                cursor.execute("""
-                    SELECT id, name, price
-                    FROM caught_fish
-                    WHERE user_id = ?
-                    LIMIT 1
+                    WHERE user_id = %s
+                    AND bait = 0
                 """, (user_id,))
+                fish_prices = cursor.fetchall()
 
-            fish = cursor.fetchone()
+                if not fish_prices:
+                    return "Your sack is empty. You have no fish to sell."
 
-            if not fish:
-                conn.close()
-                return "Your sack is empty." if not name else f"There were no '{name}' found in your sack."
+                total_earnings = float(sum(price[0] for price in fish_prices))
 
-            fish_id, name, price = fish
+                # Remove all fish from the database
+                cursor.execute("""
+                    DELETE FROM caught_fish
+                    WHERE user_id = %s
+                    AND bait = 0
+                """, (user_id,))
+                # Add the earnings to the user's balance
+                new_balance = economy.add_balance(user_id, total_earnings)
 
-            # Remove the fish from the database
-            cursor.execute("""
-                DELETE FROM caught_fish
-                WHERE id = ?
-            """, (fish_id,))
-            conn.commit()
-            conn.close()
+                return f"You sold all your fish for a total of ${total_earnings:.2f}! Your new balance is ${new_balance:.2f}."
+            else:
+                # Sell the first fish in the sack or the first matching fish
+                if name:
+                    # Sanitize the name input
+                    name = name.strip()
 
-            # Add the earnings to the user's balance
-            new_balance = economy.add_balance(user_id, price)
-            
-            return f"You sold a {name} for ${price:.2f}! Your new balance is ${new_balance:.2f}."
+                    # Retrieve the first fish matching the name (case-insensitive) from the database
+                    cursor.execute("""
+                        SELECT id, name, price
+                        FROM caught_fish
+                        WHERE user_id = %s AND LOWER(name) = LOWER(%s)
+                        LIMIT 1
+                    """, (user_id, name))
+                else:
+                    # Retrieve the first fish in the sack if no name is provided
+                    cursor.execute("""
+                        SELECT id, name, price
+                        FROM caught_fish
+                        WHERE user_id = %s
+                        LIMIT 1
+                    """, (user_id,))
+
+                fish = cursor.fetchone()
+
+                if not fish:
+                    return "Your sack is empty." if not name else f"There were no '{name}' found in your sack."
+
+                fish_id, name, price = fish
+
+                # Remove the fish from the database
+                cursor.execute("""
+                    DELETE FROM caught_fish
+                    WHERE id = %s
+                """, (fish_id,))
+                # Add the earnings to the user's balance
+                new_balance = economy.add_balance(user_id, float(price))
+                
+                return f"You sold a {name} for ${price:.2f}! Your new balance is ${new_balance:.2f}."
 
     def bait(self, playername, bait_name):
         """
@@ -455,17 +395,14 @@ class Fishing:
         :param playername: The name of the player.
         :return: The bait set for the player or None if no bait is set.
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, name
-            FROM caught_fish
-            WHERE user_id = ? AND bait = 1
-            LIMIT 1
-        """, (playername,))
-        bait = cursor.fetchone()
-        conn.close()
-        
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT id, name
+                FROM caught_fish
+                WHERE user_id = %s AND bait = 1
+                LIMIT 1
+            """, (playername,))
+            bait = cursor.fetchone()
         if bait:
             # Get the corresponding fish data
             fish_data = next((fish for fish in self.fish_data if fish["name"].lower() == bait[1].lower()), None)
@@ -485,25 +422,21 @@ class Fishing:
         :param playername: The name of the player.
         :param bait_id: The ID of the bait fish.
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with DatabaseConnection() as cursor:
 
-        # Unset any existing bait for the player
-        cursor.execute("""
-            UPDATE caught_fish
-            SET bait = 0
-            WHERE user_id = ? AND bait = 1
-        """, (playername,))
+            # Unset any existing bait for the player
+            cursor.execute("""
+                UPDATE caught_fish
+                SET bait = 0
+                WHERE user_id = %s AND bait = 1
+            """, (playername,))
 
-        # Set the bait for the player
-        cursor.execute("""
-            UPDATE caught_fish
-            SET bait = 1
-            WHERE id = ? AND user_id = ?
-        """, (bait_id, playername))
-
-        conn.commit()
-        conn.close()
+            # Set the bait for the player
+            cursor.execute("""
+                UPDATE caught_fish
+                SET bait = 1
+                WHERE id = %s AND user_id = %s
+            """, (bait_id, playername))
         return True
 
     def remove_fish_from_sack(self, user_id, fish_id):
@@ -513,12 +446,9 @@ class Fishing:
         :param user_id: The ID of the user.
         :param fish_id: The ID of the fish to remove.
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            DELETE FROM caught_fish
-            WHERE id = ? AND user_id = ?
-        """, (fish_id, user_id))
-        conn.commit()
-        conn.close()
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                DELETE FROM caught_fish
+                WHERE id = %s AND user_id = %s
+            """, (fish_id, user_id))
     

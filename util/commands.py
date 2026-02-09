@@ -59,8 +59,9 @@ class CommandRegistry:
 
     def execute(self, command_name, *args, **kwargs):
         """Execute a registered command."""
-        if command_name.lower() in self.commands:
-            return self.commands[command_name](*args, **kwargs)
+        command_lower = command_name.lower()
+        if command_lower in self.commands:
+            return self.commands[command_lower](*args, **kwargs)
         else:
             best_match, score = process.extractOne(command_name, self.commands.keys(), scorer=fuzz.ratio)
             self.logger.warning(f"Command '{command_name}' not found. Did you mean '{best_match}'? (Score: {score})")

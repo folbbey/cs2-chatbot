@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local databases (not needed in container)
+*.db
+*.db-journal
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test_*.py
+
+# Client code (not needed in server container)
+client/
+
+# Launcher and main entry points (server uses CMD)
+launcher.py
+cs2chatbot.py
+cs2chatbot.spec
+
+# Build artifacts
+*.spec
+assets/
+
+# Local config overrides
+config.local.toml
