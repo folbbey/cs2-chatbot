@@ -4,14 +4,12 @@ from time import sleep
 import win32gui
 import keyboard
 import threading
-from PyQt6.QtCore import QTimer  # Import QTimer
 import sys
 
 from util.config import load_config, copy_files_to_appdata
 from util.commands import command_registry
 from util.module_registry import module_registry
 from util.chat_utils import write_chat_to_cfg, load_chat, send_chat
-from util.ui import UI
 import util.keys as keys
 
 
@@ -24,10 +22,8 @@ def resource_path(relative_path):
 
 
 class Bot:
-    def __init__(self, ui_instance) -> None:
+    def __init__(self) -> None:
         """Initialize the bot with configuration, commands, and chat queue."""
-        self.ui_instance: UI = ui_instance  # Store the UI instance
-        self.ui_instance.update_status("Initializing bot...")
         self.state = "Initializing..."  # Initialize the state
         # Set up logging
         self.logger = logging.getLogger(__name__)  # Create a logger for the Bot class
@@ -74,12 +70,6 @@ class Bot:
         """Stop the bot and clean up resources."""
         self.logger.info("Stopping bot...")
         self.stop_event.set()  # Signal all threads to stop sleeping
-        try:
-            # Schedule the label update on the main thread using QTimer
-            QTimer.singleShot(0, lambda: self.ui_instance.update_status("Stopping..."))
-        except RuntimeError:
-            # Silently ignore if the UI is not running
-            pass
         self.running = False  # Set the running flag to False to exit the loop
         keyboard.unhook_all_hotkeys()
         self.logger.info("Bot stopped.")
@@ -149,7 +139,6 @@ class Bot:
     def connect_to_cs2(self):
         """Connect to the Counter-Strike 2 window."""
         self.logger.info("Waiting for Counter-Strike 2 window...")
-        self.ui_instance.update_status("Waiting for CS2 to open...")
         cs2_hwnd = win32gui.FindWindow(None, "Counter-Strike 2")  # Find the CS2 window
 
         # Wait for the CS2 window to appear
@@ -176,7 +165,6 @@ class Bot:
         self.chat_queue.append((is_team, chattext))  # Append the message to the queue
         self.logger.info(f"{len(self.chat_queue)} messages in queue.")
         self.logger.debug(self.chat_queue)
-        self.ui_instance.update_status(f"{self.state} ({len(self.chat_queue)} msgs in queue)")
 
 
     def _chat_queue_worker(self) -> None:
@@ -186,7 +174,6 @@ class Bot:
                 self._interruptible_sleep(0.1)
             self.logger.info(f"{len(self.chat_queue)} messages in queue.")
             self.logger.info(self.chat_queue)
-            self.ui_instance.update_status(f"{self.state} ({len(self.chat_queue)} msgs in queue)")
             is_team, chattext = self.chat_queue.pop(0)
             self.logger.info(f"Processing chat message: {chattext} (team: {is_team})")
 
@@ -211,21 +198,18 @@ class Bot:
             except Exception as e:
                 # self.logger.error(f"Error processing chat message: {e}")
                 pass
-            self.ui_instance.update_status(f"{self.state}")
 
     def set_paused(self, paused: bool) -> None:
         """Set the paused state of the bot."""
         self.paused = paused
         self.state = "Paused" if paused else "Ready"
         self.logger.info(f"Bot {self.state.lower()}.")
-        self.ui_instance.update_status(self.state)  # Update the status
         self.logger.info(f"Status updated to: {self.state}")
 
     def run(self):
         """Main loop to monitor the console log and process commands."""
         if not os.path.exists(self.console_log_path):
             self.logger.error(f"Console log file {self.console_log_path} does not exist.")
-            self.ui_instance.update_status("ERR: Check config paths!")
             return
         
         if hasattr(sys, '_MEIPASS'):
@@ -243,7 +227,6 @@ class Bot:
         self.chat_queue_thread.start()  # Start the chat queue processing thread
 
         self.logger.info("Attempting to read console log...")
-        self.ui_instance.update_status("Looking for console.log...")
 
         try:
             log_file = open(self.console_log_path, "r", encoding="utf-8")
@@ -256,15 +239,25 @@ class Bot:
         resume_buttons = self.config.get("resume_buttons", "enter,esc").split(",")
 
         self.logger.info("Registering hotkeys...")
-        self.ui_instance.update_status("Registering hotkeys...")
 
-        for button in pause_buttons:
-            keyboard.add_hotkey(button.strip(), self.set_paused, args=(True,))
-        for button in resume_buttons:
-            keyboard.add_hotkey(button.strip(), self.set_paused, args=(False,))
+        try:
+            for button in pause_buttons:
+                button = button.strip()
+                if button:  # Skip empty strings
+                    self.logger.info(f"Registering pause hotkey: {button}")
+                    keyboard.add_hotkey(button, self.set_paused, args=(True,))
+                    
+            for button in resume_buttons:
+                button = button.strip()
+                if button:  # Skip empty strings
+                    self.logger.info(f"Registering resume hotkey: {button}")
+                    keyboard.add_hotkey(button, self.set_paused, args=(False,))
+                            
+            self.logger.info("Hotkeys registered successfully.")
+        except Exception as e:
+            self.logger.error(f"Failed to register hotkeys: {e}")
+            # Continue without hotkeys if registration fails
 
-
-        self.ui_instance.update_status("Ready")
         self.state = "Ready"  # Update the state to "Ready"
 
         self.logger.info("Starting bot main loop...")
