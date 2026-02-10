@@ -72,7 +72,8 @@ class Inventory:
             item_name = item[0]
             item_data = json.loads(item[1])
             quantity = item[2]
-            if item_data.get("type").lower() == item_type.lower():
+            item_type_value = item_data.get("type")
+            if item_type_value and item_type_value.lower() == item_type.lower():
                 found_items.append((item_name, item_data, quantity))
 
         if not found_items:

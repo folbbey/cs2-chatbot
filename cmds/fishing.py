@@ -50,9 +50,11 @@ def sack_command(bot, is_team: bool, playername: str, chattext: str) -> None:
     :param chattext: Additional text (ignored for this command).
     :help sack: Display the contents of your fishing sack. (alias: bag)
     """
+    bot.logger.info(f"SACK_COMMAND CALLED for {playername}")
     fishing_module: FishingModule = bot.modules.get_module("fishing")
     if fishing_module:
         sack = fishing_module.get_sack(playername)
+        bot.logger.info(f"SACK_COMMAND got sack: {sack}")
         if sack:
             sack_contents = []
             for fish in sack:
