@@ -10,3 +10,5 @@ thefuzz
 flask
 requests
 psycopg2-binary
+discord.py
+python-dotenv

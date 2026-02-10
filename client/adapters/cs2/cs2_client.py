@@ -176,7 +176,8 @@ class CS2Client:
                 json={
                     "is_team": is_team,
                     "playername": playername,
-                    "chattext": chattext
+                    "chattext": chattext,
+                    "platform": "cs2"
                 },
                 timeout=5
             )

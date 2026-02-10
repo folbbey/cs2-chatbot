@@ -168,9 +168,13 @@ def process_message():
         is_team = data.get('is_team', False)
         playername = data.get('playername', '')
         chattext = data.get('chattext', '')
+        platform = data.get('platform', 'unknown')
         
         if not playername or not chattext:
             return jsonify({"error": "Missing required fields"}), 400
+        
+        # Store platform info on the bot server for commands to access
+        bot_server.platform = platform
             
         # Process the message
         responses = bot_server.process_message(is_team, playername, chattext)
