@@ -78,8 +78,8 @@ class DiscordClient(commands.Bot):
         if not chattext.startswith(self.command_prefix):
             return
         
-        # Extract playername and determine if it's a "team" message (DM vs channel)
-        playername = str(message.author.display_name)
+        # Extract playername (use Discord username, not display name)
+        playername = str(message.author.name)
         is_team = isinstance(message.channel, discord.DMChannel)
         
         self.logger.info(f"Received message from {playername}: {chattext} (DM: {is_team})")

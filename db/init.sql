@@ -19,6 +19,19 @@ CREATE TABLE IF NOT EXISTS caught_fish (
 -- Create index on user_id for faster queries
 CREATE INDEX IF NOT EXISTS idx_caught_fish_user_id ON caught_fish(user_id);
 
+-- Trophy fish table
+CREATE TABLE IF NOT EXISTS trophy_fish (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    weight NUMERIC(10, 2) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index on user_id for faster queries
+CREATE INDEX IF NOT EXISTS idx_trophy_fish_user_id ON trophy_fish(user_id);
+
 -- User inventory table
 CREATE TABLE IF NOT EXISTS user_inventory (
     user_id TEXT NOT NULL,

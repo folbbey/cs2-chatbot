@@ -175,6 +175,11 @@ def process_message():
         
         # Store platform info on the bot server for commands to access
         bot_server.platform = platform
+        
+        # Get preferred identifier (Discord if linked, otherwise original)
+        account_linking = bot_server.modules.get_module("account_linking")
+        if account_linking:
+            playername = account_linking.get_preferred_identifier(platform, playername)
             
         # Process the message
         responses = bot_server.process_message(is_team, playername, chattext)

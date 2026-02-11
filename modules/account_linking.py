@@ -170,12 +170,87 @@ class AccountLinking:
             
             # Delete the used code
             cursor.execute("DELETE FROM link_codes WHERE code = %s", (code,))
+            
+            # Migrate fishing data if needed
+            self._migrate_fishing_data(cursor, source_platform, source_identifier, 
+                                       target_platform, target_identifier)
         
         return {
             "success": True,
             "message": f"Successfully linked {target_platform} user \"{target_identifier}\" to {source_platform} user \"{source_identifier}\".",
             "account_id": account_id
         }
+    
+    def _migrate_fishing_data(self, cursor, source_platform: str, source_identifier: str,
+                             target_platform: str, target_identifier: str):
+        """
+        Migrate fishing data from CS2 to Discord if Discord account is empty.
+        
+        :param cursor: Database cursor
+        :param source_platform: Platform where code was generated
+        :param source_identifier: User identifier on source platform
+        :param target_platform: Platform where code was used
+        :param target_identifier: User identifier on target platform
+        """
+        # Determine which account is CS2 and which is Discord
+        cs2_user = None
+        discord_user = None
+        
+        if source_platform == 'cs2':
+            cs2_user = source_identifier
+            discord_user = target_identifier if target_platform == 'discord' else None
+        elif target_platform == 'cs2':
+            cs2_user = target_identifier
+            discord_user = source_identifier if source_platform == 'discord' else None
+        elif source_platform == 'discord':
+            discord_user = source_identifier
+        elif target_platform == 'discord':
+            discord_user = target_identifier
+        
+        # Only migrate if we have both CS2 and Discord accounts
+        if not cs2_user or not discord_user:
+            return
+        
+        # Check if Discord account has any fishing data
+        cursor.execute("""
+            SELECT COUNT(*) FROM caught_fish WHERE user_id = %s
+        """, (discord_user,))
+        discord_fish_count = cursor.fetchone()[0]
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM user_inventory WHERE user_id = %s
+        """, (discord_user,))
+        discord_inventory_count = cursor.fetchone()[0]
+        
+        # If Discord account is empty, migrate from CS2
+        if discord_fish_count == 0 and discord_inventory_count == 0:
+            # Migrate caught fish
+            cursor.execute("""
+                UPDATE caught_fish
+                SET user_id = %s
+                WHERE user_id = %s
+            """, (discord_user, cs2_user))
+            
+            # Migrate inventory
+            cursor.execute("""
+                UPDATE user_inventory
+                SET user_id = %s
+                WHERE user_id = %s
+            """, (discord_user, cs2_user))
+            
+            # Migrate balance
+            cursor.execute("""
+                UPDATE user_balances
+                SET user_id = %s
+                WHERE user_id = %s
+            """, (discord_user, cs2_user))
+            
+            # Migrate status effects
+            cursor.execute("""
+                UPDATE status_effects
+                SET user_id = %s
+                WHERE user_id = %s
+            """, (discord_user, cs2_user))
     
     def get_linked_accounts(self, platform: str, identifier: str) -> list:
         """
@@ -228,6 +303,45 @@ class AccountLinking:
             if result:
                 return f"account_{result[0]}"
             
+            return identifier
+    
+    def get_preferred_identifier(self, platform: str, identifier: str) -> str:
+        """
+        Get the preferred identifier for a user (Discord if linked, otherwise original).
+        This ensures CS2 users access their Discord fishing data when linked.
+        
+        :param platform: The platform
+        :param identifier: The user identifier
+        :return: The preferred identifier (Discord username if linked, otherwise original)
+        """
+        with DatabaseConnection() as cursor:
+            # Find the account_id for this user
+            cursor.execute("""
+                SELECT account_id FROM account_links
+                WHERE platform = %s AND identifier = %s
+            """, (platform, identifier))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                # No linked account, return original identifier
+                return identifier
+            
+            account_id = result[0]
+            
+            # Look for a Discord account in this link group
+            cursor.execute("""
+                SELECT identifier FROM account_links
+                WHERE account_id = %s AND platform = 'discord'
+            """, (account_id,))
+            
+            discord_result = cursor.fetchone()
+            
+            if discord_result:
+                # Return Discord identifier if it exists
+                return discord_result[0]
+            
+            # No Discord account linked, return original identifier
             return identifier
     
     def cleanup_expired_codes(self):
