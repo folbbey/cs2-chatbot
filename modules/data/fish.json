@@ -210,6 +210,216 @@
         "description": "The bluefin tuna tastes exquisite, and you feel like royalty with every bite."
     },
     {
+        "name": "Yellowfin Tuna",
+        "type": "fish",
+        "min_weight": 40,
+        "max_weight": 180,
+        "price_multiplier": 4.2,
+        "rarity": "Legendary",
+        "catch_rate": 1.2,
+        "description": "The yellowfin tuna tastes rich and buttery, melting on your tongue like ocean gold."
+    },
+    {
+        "name": "Blue Marlin",
+        "type": "fish",
+        "min_weight": 60,
+        "max_weight": 250,
+        "price_multiplier": 4.8,
+        "rarity": "Legendary",
+        "catch_rate": 0.9,
+        "description": "The blue marlin tastes majestic, and you feel like a champion angler with every bite."
+    },
+    {
+        "name": "Giant Grouper",
+        "type": "fish",
+        "min_weight": 50,
+        "max_weight": 220,
+        "price_multiplier": 4.3,
+        "rarity": "Legendary",
+        "catch_rate": 1.1,
+        "description": "The giant grouper tastes incredibly meaty and satisfying, like a steak from the sea."
+    },
+    {
+        "name": "Mahi-Mahi",
+        "type": "fish",
+        "min_weight": 20,
+        "max_weight": 120,
+        "price_multiplier": 3.8,
+        "rarity": "Epic",
+        "catch_rate": 2.5,
+        "description": "The mahi-mahi tastes tropical and vibrant, transporting you to warm island waters."
+    },
+    {
+        "name": "King Salmon",
+        "type": "fish",
+        "min_weight": 25,
+        "max_weight": 140,
+        "price_multiplier": 4.0,
+        "rarity": "Legendary",
+        "catch_rate": 1.3,
+        "description": "The king salmon tastes regal and fatty, worthy of its royal name."
+    },
+    {
+        "name": "Albacore Tuna",
+        "type": "fish",
+        "min_weight": 15,
+        "max_weight": 90,
+        "price_multiplier": 3.5,
+        "rarity": "Epic",
+        "catch_rate": 3,
+        "description": "The albacore tuna tastes clean and mild, perfect for a refined palate."
+    },
+    {
+        "name": "Wahoo",
+        "type": "fish",
+        "min_weight": 30,
+        "max_weight": 160,
+        "price_multiplier": 4.4,
+        "rarity": "Legendary",
+        "catch_rate": 1.0,
+        "description": "The wahoo tastes fast and fierce, matching the speed at which it swam."
+    },
+    {
+        "name": "Giant Barracuda",
+        "type": "fish",
+        "min_weight": 35,
+        "max_weight": 150,
+        "price_multiplier": 3.9,
+        "rarity": "Epic",
+        "catch_rate": 2.2,
+        "description": "The barracuda tastes aggressive and bold, with a bite that matches its personality."
+    },
+    {
+        "name": "Sailfish",
+        "type": "fish",
+        "min_weight": 40,
+        "max_weight": 190,
+        "price_multiplier": 4.6,
+        "rarity": "Legendary",
+        "catch_rate": 0.95,
+        "description": "The sailfish tastes swift and elegant, like it was still racing through the waves."
+    },
+    {
+        "name": "Giant Lobster",
+        "type": "fish",
+        "min_weight": 10,
+        "max_weight": 45,
+        "price_multiplier": 3.7,
+        "rarity": "Epic",
+        "catch_rate": 2.8,
+        "description": "The giant lobster tastes succulent and buttery, worth every second of the battle."
+    },
+    {
+        "name": "King Crab",
+        "type": "fish",
+        "min_weight": 8,
+        "max_weight": 40,
+        "price_multiplier": 4.1,
+        "rarity": "Legendary",
+        "catch_rate": 1.4,
+        "description": "The king crab tastes royal and sweet, with meat so tender it melts in your mouth."
+    },
+    {
+        "name": "Coconut Crab",
+        "type": "fish",
+        "min_weight": 5,
+        "max_weight": 30,
+        "price_multiplier": 3.3,
+        "rarity": "Rare",
+        "catch_rate": 4.5,
+        "description": "The coconut crab tastes tropical and mysterious, like a vacation in crustacean form."
+    },
+    {
+        "name": "Spider Crab",
+        "type": "fish",
+        "min_weight": 15,
+        "max_weight": 60,
+        "price_multiplier": 3.9,
+        "rarity": "Epic",
+        "catch_rate": 2.3,
+        "description": "The spider crab tastes delicate despite its intimidating appearance and long legs."
+    },
+    {
+        "name": "Giant Octopus",
+        "type": "fish",
+        "min_weight": 30,
+        "max_weight": 150,
+        "price_multiplier": 4.2,
+        "rarity": "Legendary",
+        "catch_rate": 1.2,
+        "description": "The giant octopus tastes intelligent and complex, with eight times the flavor."
+    },
+    {
+        "name": "Colossal Squid",
+        "type": "fish",
+        "min_weight": 50,
+        "max_weight": 200,
+        "price_multiplier": 4.7,
+        "rarity": "Legendary",
+        "catch_rate": 0.8,
+        "description": "The colossal squid tastes deep-sea mysterious, from the darkest trenches."
+    },
+    {
+        "name": "Giant Clam",
+        "type": "fish",
+        "min_weight": 20,
+        "max_weight": 100,
+        "price_multiplier": 3.8,
+        "rarity": "Epic",
+        "catch_rate": 2.4,
+        "description": "The giant clam tastes like the ocean's secret treasure, smooth and briny."
+    },
+    {
+        "name": "Abalone",
+        "type": "fish",
+        "min_weight": 1,
+        "max_weight": 8,
+        "price_multiplier": 5.5,
+        "rarity": "Legendary",
+        "catch_rate": 0.9,
+        "description": "The abalone tastes like pure luxury, prized by chefs worldwide."
+    },
+    {
+        "name": "Mantis Shrimp",
+        "type": "fish",
+        "min_weight": 2,
+        "max_weight": 12,
+        "price_multiplier": 4.0,
+        "rarity": "Epic",
+        "catch_rate": 2.6,
+        "description": "The mantis shrimp tastes explosive, matching its punch that can break glass."
+    },
+    {
+        "name": "Sea Urchin",
+        "type": "fish",
+        "min_weight": 0.5,
+        "max_weight": 3,
+        "price_multiplier": 4.3,
+        "rarity": "Rare",
+        "catch_rate": 4.2,
+        "description": "The sea urchin tastes creamy and oceanic, a delicacy for the brave."
+    },
+    {
+        "name": "Giant Scallop",
+        "type": "fish",
+        "min_weight": 3,
+        "max_weight": 15,
+        "price_multiplier": 3.6,
+        "rarity": "Rare",
+        "catch_rate": 4.8,
+        "description": "The giant scallop tastes sweet and tender, seared to perfection in your imagination."
+    },
+    {
+        "name": "Geoduck",
+        "type": "fish",
+        "min_weight": 2,
+        "max_weight": 10,
+        "price_multiplier": 3.4,
+        "rarity": "Rare",
+        "catch_rate": 5.0,
+        "description": "The geoduck tastes strange and wonderful, with a texture that defies explanation."
+    },
+    {
         "name": "Whale Shark",
         "type": "fish",
         "min_weight": 500,
@@ -308,5 +518,105 @@
         "rarity": "Uncommon",
         "catch_rate": 10,
         "description": "An old barnacle-laden Bravo case."
+    },
+    {
+        "name": "Sunken Treasure Chest",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Rare",
+        "catch_rate": 3,
+        "description": "A waterlogged treasure chest covered in seaweed. Could be full of gold... or disappointment."
+    },
+    {
+        "name": "Ancient Sword",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Epic",
+        "catch_rate": 1.5,
+        "description": "A legendary blade from a forgotten era, still gleaming despite centuries underwater."
+    },
+    {
+        "name": "Pearl Oyster",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Rare",
+        "catch_rate": 4,
+        "description": "A pristine oyster that might contain a rare black pearl."
+    },
+    {
+        "name": "Message in a Bottle",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Uncommon",
+        "catch_rate": 8,
+        "description": "An old bottle with a mysterious message inside. It reads: 'Send nudes.'"
+    },
+    {
+        "name": "Golden Compass",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Legendary",
+        "catch_rate": 0.5,
+        "description": "A magnificent golden compass that always points to... fish?"
+    },
+    {
+        "name": "Mermaid's Mirror",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Epic",
+        "catch_rate": 1.2,
+        "description": "A shimmering mirror said to have belonged to a mermaid. Your reflection looks surprisingly good."
+    },
+    {
+        "name": "Cursed Pirate Ring",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Legendary",
+        "catch_rate": 0.6,
+        "description": "A ring bearing a pirate's skull. You feel an urge to say 'Arrr' constantly."
+    },
+    {
+        "name": "Atlantean Coin",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Rare",
+        "catch_rate": 3.5,
+        "description": "An ancient coin from the lost city of Atlantis. Worth its weight in water."
+    },
+    {
+        "name": "Kraken's Tooth",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Epic",
+        "catch_rate": 1.8,
+        "description": "A massive tooth from the legendary Kraken. Sharp enough to cut through steel."
+    },
+    {
+        "name": "Enchanted Seashell",
+        "type": "item",
+        "min_weight": 0,
+        "max_weight": 0,
+        "price_multiplier": 0.0,
+        "rarity": "Legendary",
+        "catch_rate": 0.7,
+        "description": "A beautiful shell that whispers secrets of the ocean when you hold it to your ear."
     }
 ]
