@@ -152,3 +152,21 @@ def bait_command(bot, is_team: bool, playername: str, chattext: str) -> None:
         bot.add_to_chat_queue(is_team, f"{playername}: {result}")
     else:
         bot.add_to_chat_queue(is_team, f"{playername}: Fishing module not found.")
+
+@command_registry.register("sellall")
+def sellall_command(bot, is_team: bool, playername: str, chattext: str) -> None:
+    """
+    Sell all fish from the player's sack.
+
+    :param bot: The Bot instance.
+    :param is_team: Whether the message is for the team chat.
+    :param playername: The name of the player.
+    :param chattext: Additional text (ignored for this command).
+    :help sellall: Sell all fish from your sack at once.
+    """
+    fishing_module: FishingModule = bot.modules.get_module("fishing")
+    if fishing_module:
+        result = fishing_module.sell_fish(playername, "all")
+        bot.add_to_chat_queue(is_team, f"{playername}: {result}")
+    else:
+        bot.add_to_chat_queue(is_team, f"{playername}: Fishing module not found.")

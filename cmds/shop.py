@@ -82,3 +82,55 @@ def buy_command(bot, is_team: bool, playername: str, chattext: str) -> None:
             bot.add_to_chat_queue(is_team, f"{playername}: {result['success']}")
     else:
         bot.add_to_chat_queue(is_team, f"{playername}: Shop module not found.")
+
+@command_registry.register("rods")
+def rods_command(bot, is_team: bool, playername: str, chattext: str) -> None:
+    """
+    Shortcut to view rods in the shop.
+    
+    :param bot: The Bot instance.
+    :param is_team: Whether the message is for the team chat.
+    :param playername: The name of the player.
+    :param chattext: Additional text (ignored).
+    :help rods: View available fishing rods in the shop.
+    """
+    shop_command(bot, is_team, playername, "rods")
+
+@command_registry.register("beer")
+def beer_command(bot, is_team: bool, playername: str, chattext: str) -> None:
+    """
+    Shortcut to view beer in the shop.
+    
+    :param bot: The Bot instance.
+    :param is_team: Whether the message is for the team chat.
+    :param playername: The name of the player.
+    :param chattext: Additional text (ignored).
+    :help beer: View available beer in the shop.
+    """
+    shop_command(bot, is_team, playername, "beer")
+
+@command_registry.register("tobacco")
+def tobacco_command(bot, is_team: bool, playername: str, chattext: str) -> None:
+    """
+    Shortcut to view tobacco in the shop.
+    
+    :param bot: The Bot instance.
+    :param is_team: Whether the message is for the team chat.
+    :param playername: The name of the player.
+    :param chattext: Additional text (ignored).
+    :help tobacco: View available tobacco in the shop.
+    """
+    shop_command(bot, is_team, playername, "tobacco")
+
+@command_registry.register("sacks")
+def sacks_command(bot, is_team: bool, playername: str, chattext: str) -> None:
+    """
+    Shortcut to view sacks in the shop.
+    
+    :param bot: The Bot instance.
+    :param is_team: Whether the message is for the team chat.
+    :param playername: The name of the player.
+    :param chattext: Additional text (ignored).
+    :help sacks: View available sacks in the shop.
+    """
+    shop_command(bot, is_team, playername, "sacks")
