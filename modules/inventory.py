@@ -31,7 +31,7 @@ class Inventory:
             cursor.execute("""
                 INSERT INTO user_inventory (user_id, item_name, item_data, quantity)
                 VALUES (%s, %s, %s, %s)
-                ON CONFLICT(user_id, item_name) DO UPDATE SET quantity = EXCLUDED.quantity + %s
+                ON CONFLICT(user_id, item_name) DO UPDATE SET quantity = user_inventory.quantity + %s
             """, (user_id, item_name, item_data, quantity, quantity))
         return f"Added {quantity} x {item_name} ({item_data}) to {user_id}'s inventory."
 
