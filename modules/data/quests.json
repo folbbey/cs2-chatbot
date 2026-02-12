@@ -1,0 +1,234 @@
+[
+    {
+        "id": "daily_tuna_haul",
+        "type": "daily",
+        "title": "Tuna Bonanza",
+        "description": "Catch a variety of premium tuna for a wealthy buyer.",
+        "requirements": [
+            {"name": "Bluefin Tuna", "quantity": 3},
+            {"name": "Yellowfin Tuna", "quantity": 3}
+        ],
+        "reward_money": 15000
+    },
+    {
+        "id": "daily_legendary_hunt",
+        "type": "daily",
+        "title": "Legendary Fisher",
+        "description": "Prove your worth by catching legendary fish.",
+        "requirements": [
+            {"name": "King Salmon", "quantity": 2},
+            {"name": "Blue Marlin", "quantity": 2},
+            {"name": "Wahoo", "quantity": 2}
+        ],
+        "reward_money": 25000
+    },
+    {
+        "id": "daily_shellfish_feast",
+        "type": "daily",
+        "title": "Shellfish Extravaganza",
+        "description": "A royal banquet needs premium shellfish.",
+        "requirements": [
+            {"name": "King Crab", "quantity": 4},
+            {"name": "Giant Lobster", "quantity": 4}
+        ],
+        "reward_money": 18000
+    },
+    {
+        "id": "daily_treasure_hunter",
+        "type": "daily",
+        "title": "Treasure Hunter",
+        "description": "Find rare treasures from the depths.",
+        "requirements": [
+            {"name": "Sunken Treasure Chest", "quantity": 2},
+            {"name": "Pearl Oyster", "quantity": 5}
+        ],
+        "reward_money": 12000
+    },
+    {
+        "id": "daily_ancient_collection",
+        "type": "daily",
+        "title": "Ancient Collector",
+        "description": "Gather ancient artifacts for a museum.",
+        "requirements": [
+            {"name": "Ancient Sword", "quantity": 1},
+            {"name": "Atlantean Coin", "quantity": 10},
+            {"name": "Kraken's Tooth", "quantity": 2}
+        ],
+        "reward_money": 20000
+    },
+    {
+        "id": "daily_exotic_catch",
+        "type": "daily",
+        "title": "Exotic Delicacies",
+        "description": "A celebrity chef needs exotic fish for a special event.",
+        "requirements": [
+            {"name": "Sailfish", "quantity": 3},
+            {"name": "Mahi-Mahi", "quantity": 3}
+        ],
+        "reward_money": 16000
+    },
+    {
+        "id": "daily_deep_sea_challenge",
+        "type": "daily",
+        "title": "Deep Sea Challenge",
+        "description": "Dive deep and catch the ocean's giants.",
+        "requirements": [
+            {"name": "Giant Grouper", "quantity": 2},
+            {"name": "Giant Barracuda", "quantity": 2},
+            {"name": "Colossal Squid", "quantity": 1}
+        ],
+        "reward_money": 22000
+    },
+    {
+        "id": "daily_cursed_artifacts",
+        "type": "daily",
+        "title": "Cursed Collection",
+        "description": "A mysterious collector seeks cursed treasures.",
+        "requirements": [
+            {"name": "Cursed Pirate Ring", "quantity": 2},
+            {"name": "Enchanted Seashell", "quantity": 3}
+        ],
+        "reward_money": 18000
+    },
+    {
+        "id": "daily_oceanic_bounty",
+        "type": "daily",
+        "title": "Oceanic Bounty",
+        "description": "Fill a massive order for a seafood restaurant chain.",
+        "requirements": [
+            {"name": "Giant Lobster", "quantity": 5},
+            {"name": "King Crab", "quantity": 5},
+            {"name": "Giant Octopus", "quantity": 3}
+        ],
+        "reward_money": 24000
+    },
+    {
+        "id": "daily_mystical_waters",
+        "type": "daily",
+        "title": "Mystical Waters",
+        "description": "Capture magical treasures from enchanted seas.",
+        "requirements": [
+            {"name": "Golden Compass", "quantity": 1},
+            {"name": "Mermaid's Mirror", "quantity": 1},
+            {"name": "Pearl Oyster", "quantity": 8}
+        ],
+        "reward_money": 28000
+    },
+    {
+        "id": "daily_message_collector",
+        "type": "daily",
+        "title": "Message Collector",
+        "description": "Gather messages in bottles for a historian.",
+        "requirements": [
+            {"name": "Message in a Bottle", "quantity": 15}
+        ],
+        "reward_money": 10000
+    },
+    {
+        "id": "daily_apex_predators",
+        "type": "daily",
+        "title": "Apex Predators",
+        "description": "Catch the ocean's most dangerous hunters.",
+        "requirements": [
+            {"name": "Great White Shark", "quantity": 1},
+            {"name": "Hammerhead Shark", "quantity": 2},
+            {"name": "Tiger Shark", "quantity": 2}
+        ],
+        "reward_money": 30000
+    },
+    {
+        "id": "daily_abyssal_harvest",
+        "type": "daily",
+        "title": "Abyssal Harvest",
+        "description": "Harvest rare creatures from the ocean's depths.",
+        "requirements": [
+            {"name": "Giant Clam", "quantity": 4},
+            {"name": "Geoduck", "quantity": 6},
+            {"name": "Spider Crab", "quantity": 5}
+        ],
+        "reward_money": 14000
+    },
+    {
+        "id": "daily_premium_tuna",
+        "type": "daily",
+        "title": "Premium Tuna Order",
+        "description": "Supply top-grade tuna for a sushi empire.",
+        "requirements": [
+            {"name": "Bluefin Tuna", "quantity": 5},
+            {"name": "Albacore Tuna", "quantity": 8}
+        ],
+        "reward_money": 17000
+    },
+    {
+        "id": "quest_salmon_catch",
+        "type": "regular",
+        "title": "Basic Salmon Run",
+        "description": "Catch some salmon for the local market.",
+        "requirements": [
+            {"name": "Salmon", "quantity": 10}
+        ],
+        "reward_money": 250
+    },
+    {
+        "id": "quest_mixed_catch",
+        "type": "regular",
+        "title": "Mixed Haul",
+        "description": "Bring a variety of common fish.",
+        "requirements": [
+            {"name": "Trout", "quantity": 5},
+            {"name": "Bass", "quantity": 5}
+        ],
+        "reward_money": 300
+    },
+    {
+        "id": "quest_rare_fish",
+        "type": "regular",
+        "title": "Rare Request",
+        "description": "Someone wants a rare fish.",
+        "requirements": [
+            {"name": "Sturgeon", "quantity": 2}
+        ],
+        "reward_money": 400
+    },
+    {
+        "id": "quest_epic_catch",
+        "type": "regular",
+        "title": "Epic Catch",
+        "description": "Catch epic quality fish.",
+        "requirements": [
+            {"name": "Swordfish", "quantity": 1},
+            {"name": "Marlin", "quantity": 1}
+        ],
+        "reward_money": 500
+    },
+    {
+        "id": "quest_treasure_find",
+        "type": "regular",
+        "title": "Treasure Hunt",
+        "description": "Find some treasure items.",
+        "requirements": [
+            {"name": "Message in a Bottle", "quantity": 3}
+        ],
+        "reward_money": 200
+    },
+    {
+        "id": "quest_pearl_collector",
+        "type": "regular",
+        "title": "Pearl Collector",
+        "description": "Gather pearl oysters.",
+        "requirements": [
+            {"name": "Pearl Oyster", "quantity": 2}
+        ],
+        "reward_money": 350
+    },
+    {
+        "id": "quest_crab_order",
+        "type": "regular",
+        "title": "Crab Order",
+        "description": "A restaurant needs crabs.",
+        "requirements": [
+            {"name": "Coconut Crab", "quantity": 3}
+        ],
+        "reward_money": 400
+    }
+]

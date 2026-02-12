@@ -93,3 +93,17 @@ def load_config() -> dict:
         return generate_default_config()
     with open(config_path, "r") as f:
         return toml.load(f)
+
+class ConfigWrapper:
+    """Wrapper to make dict behave like ConfigParser."""
+    def __init__(self, config_dict):
+        self._config = config_dict
+    
+    def get(self, section, key, fallback=None):
+        """Get a config value with fallback support."""
+        if section in self._config:
+            return self._config[section].get(key, fallback)
+        return fallback
+
+# Global config instance
+config = ConfigWrapper(load_config())
