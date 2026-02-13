@@ -222,35 +222,85 @@ class AccountLinking:
         """, (discord_user,))
         discord_inventory_count = cursor.fetchone()[0]
         
-        # If Discord account is empty, migrate from CS2
+        # If Discord account is empty, migrate from CS2; otherwise merge
         if discord_fish_count == 0 and discord_inventory_count == 0:
-            # Migrate caught fish
+            # Simple migration - just update user_id from CS2 to Discord
             cursor.execute("""
                 UPDATE caught_fish
                 SET user_id = %s
                 WHERE user_id = %s
             """, (discord_user, cs2_user))
             
-            # Migrate inventory
             cursor.execute("""
                 UPDATE user_inventory
                 SET user_id = %s
                 WHERE user_id = %s
             """, (discord_user, cs2_user))
             
-            # Migrate balance
             cursor.execute("""
                 UPDATE user_balances
                 SET user_id = %s
                 WHERE user_id = %s
             """, (discord_user, cs2_user))
             
-            # Migrate status effects
             cursor.execute("""
                 UPDATE status_effects
                 SET user_id = %s
                 WHERE user_id = %s
             """, (discord_user, cs2_user))
+        else:
+            # Merge data from both accounts
+            # Merge caught fish - just update user_id
+            cursor.execute("""
+                UPDATE caught_fish
+                SET user_id = %s
+                WHERE user_id = %s
+            """, (discord_user, cs2_user))
+            
+            # Merge inventory - combine quantities for same items
+            cursor.execute("""
+                INSERT INTO user_inventory (user_id, item_name, item_data, quantity)
+                SELECT %s, item_name, item_data, quantity
+                FROM user_inventory
+                WHERE user_id = %s
+                ON CONFLICT (user_id, item_name) 
+                DO UPDATE SET quantity = user_inventory.quantity + EXCLUDED.quantity
+            """, (discord_user, cs2_user))
+            
+            # Delete old CS2 inventory entries
+            cursor.execute("""
+                DELETE FROM user_inventory WHERE user_id = %s
+            """, (cs2_user,))
+            
+            # Merge balance - add CS2 balance to Discord balance
+            cursor.execute("""
+                INSERT INTO user_balances (user_id, balance)
+                SELECT %s, balance
+                FROM user_balances
+                WHERE user_id = %s
+                ON CONFLICT (user_id)
+                DO UPDATE SET balance = user_balances.balance + EXCLUDED.balance
+            """, (discord_user, cs2_user))
+            
+            # Delete old CS2 balance
+            cursor.execute("""
+                DELETE FROM user_balances WHERE user_id = %s
+            """, (cs2_user,))
+            
+            # Merge status effects - keep longest duration ones
+            cursor.execute("""
+                INSERT INTO status_effects (user_id, effect_type, expires_at)
+                SELECT %s, effect_type, expires_at
+                FROM status_effects
+                WHERE user_id = %s
+                ON CONFLICT (user_id, effect_type)
+                DO UPDATE SET expires_at = GREATEST(status_effects.expires_at, EXCLUDED.expires_at)
+            """, (discord_user, cs2_user))
+            
+            # Delete old CS2 status effects
+            cursor.execute("""
+                DELETE FROM status_effects WHERE user_id = %s
+            """, (cs2_user,))
     
     def get_linked_accounts(self, platform: str, identifier: str) -> list:
         """

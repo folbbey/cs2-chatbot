@@ -11,12 +11,9 @@ class QuestModule:
         quest_file = os.path.join(os.path.dirname(__file__), 'data', 'quests.json')
         with open(quest_file, 'r') as f:
             self.all_quests = json.load(f)
-        
-        self.daily_quests = [q for q in self.all_quests if q['type'] == 'daily']
-        self.regular_quests = [q for q in self.all_quests if q['type'] == 'regular']
     
     def get_daily_quest(self, user_id):
-        """Get or assign the current daily quest for a user."""
+        """Get or assign the current daily quest for a user using weighted random selection."""
         conn = get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -34,8 +31,9 @@ class QuestModule:
                 # If no quest or quest is expired (>24h) or already completed, assign new one
                 if not result or result['completed'] or \
                    (datetime.now() - result['assigned_at']) > timedelta(hours=24):
-                    # Pick a random daily quest
-                    new_quest = random.choice(self.daily_quests)
+                    # Pick a weighted random quest
+                    weights = [q['weight'] for q in self.all_quests]
+                    new_quest = random.choices(self.all_quests, weights=weights, k=1)[0]
                     
                     cur.execute("""
                         INSERT INTO daily_quests (user_id, quest_id, assigned_at, completed)
@@ -47,63 +45,41 @@ class QuestModule:
                 else:
                     # Return existing active quest
                     quest_id = result['quest_id']
-                    return next((q for q in self.daily_quests if q['id'] == quest_id), None)
+                    return next((q for q in self.all_quests if q['id'] == quest_id), None)
         finally:
             return_connection(conn)
     
-    def get_regular_quests(self):
-        """Get all available regular quests."""
-        return self.regular_quests
-    
-    def get_claimable_quests(self, user_id):
-        """Get all regular quests that the user can currently claim."""
-        claimable = []
-        for quest in self.regular_quests:
-            has_items, _, _, _ = self.check_requirements(user_id, quest['requirements'])
-            if has_items:
-                claimable.append(quest)
-        return claimable
-    
-    def claim_all_regular_quests(self, user_id):
-        """Claim all quests that are ready."""
-        claimable = self.get_claimable_quests(user_id)
-        
-        if not claimable:
-            return False, "No quests ready to claim. Keep fishing!"
-        
-        total_earned = 0
-        claimed_quests = []
-        
-        for quest in claimable:
-            # Remove items and give reward
-            self.remove_items(user_id, quest['requirements'])
-            
-            conn = get_connection()
-            try:
-                with conn.cursor() as cur:
-                    # Give money reward
-                    cur.execute("""
-                        INSERT INTO user_balances (user_id, balance)
-                        VALUES (%s, %s)
-                        ON CONFLICT (user_id)
-                        DO UPDATE SET balance = user_balances.balance + %s
-                    """, (user_id, quest['reward_money'], quest['reward_money']))
+    def get_time_until_next_quest(self, user_id):
+        """Get time remaining until user can get a new quest."""
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT assigned_at, completed
+                    FROM daily_quests
+                    WHERE user_id = %s
+                    ORDER BY assigned_at DESC
+                    LIMIT 1
+                """, (user_id,))
+                
+                result = cur.fetchone()
+                
+                if not result:
+                    return None  # No previous quest, can get one now
+                
+                if result['completed']:
+                    # Calculate time until 24h from completion
+                    time_elapsed = datetime.now() - result['assigned_at']
+                    time_remaining = timedelta(hours=24) - time_elapsed
                     
-                    # Record completion
-                    cur.execute("""
-                        INSERT INTO quest_completions (user_id, quest_id, completed_at)
-                        VALUES (%s, %s, %s)
-                    """, (user_id, quest['id'], datetime.now()))
+                    if time_remaining.total_seconds() <= 0:
+                        return None  # Can get new quest now
                     
-                    conn.commit()
-            finally:
-                return_connection(conn)
-            
-            total_earned += quest['reward_money']
-            claimed_quests.append(quest['title'])
-        
-        quest_list = ", ".join(claimed_quests)
-        return True, f"Completed {len(claimed_quests)} quest(s): {quest_list}. Earned ${total_earned:,} total!"
+                    return time_remaining
+                
+                return None  # Has active uncompleted quest
+        finally:
+            return_connection(conn)
     
     def check_requirements(self, user_id, requirements):
         """Check if user has all required items/fish."""
@@ -232,46 +208,6 @@ class QuestModule:
                     SET completed = TRUE, completed_at = %s
                     WHERE user_id = %s AND quest_id = %s
                 """, (datetime.now(), user_id, quest['id']))
-                
-                conn.commit()
-        finally:
-            return_connection(conn)
-        
-        return True, f"Quest completed! Earned ${quest['reward_money']:,}"
-    
-    def claim_regular_quest(self, user_id, quest_id):
-        """Attempt to claim a regular quest reward."""
-        quest = next((q for q in self.regular_quests if q['id'] == quest_id), None)
-        if not quest:
-            return False, "Quest not found."
-        
-        # Check requirements
-        has_items, missing_item, has_qty, needs_qty = self.check_requirements(
-            user_id, quest['requirements']
-        )
-        
-        if not has_items:
-            return False, f"Missing items: need {needs_qty}x {missing_item}, you have {has_qty}."
-        
-        # Remove items and give reward
-        self.remove_items(user_id, quest['requirements'])
-        
-        conn = get_connection()
-        try:
-            with conn.cursor() as cur:
-                # Give money reward
-                cur.execute("""
-                    INSERT INTO user_balances (user_id, balance)
-                    VALUES (%s, %s)
-                    ON CONFLICT (user_id)
-                    DO UPDATE SET balance = user_balances.balance + %s
-                """, (user_id, quest['reward_money'], quest['reward_money']))
-                
-                # Record completion
-                cur.execute("""
-                    INSERT INTO quest_completions (user_id, quest_id, completed_at)
-                    VALUES (%s, %s, %s)
-                """, (user_id, quest_id, datetime.now()))
                 
                 conn.commit()
         finally:
