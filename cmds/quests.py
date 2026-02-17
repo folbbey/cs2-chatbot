@@ -1,5 +1,12 @@
 from util.commands import command_registry
 
+
+def _format_time_remaining(time_remaining) -> str:
+    total_seconds = max(0, int(time_remaining.total_seconds()))
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    return f"{hours}h {minutes}m"
+
 @command_registry.register('daily')
 @command_registry.register('quest')
 def daily_command(bot, is_team: bool, playername: str, chattext: str) -> None:
@@ -23,9 +30,7 @@ def daily_command(bot, is_team: bool, playername: str, chattext: str) -> None:
         # Check when next quest is available
         time_remaining = quest_module.get_time_until_next_quest(playername)
         if time_remaining:
-            hours = int(time_remaining.total_seconds() // 3600)
-            minutes = int((time_remaining.total_seconds() % 3600) // 60)
-            bot.add_to_chat_queue(is_team, f"Next daily quest available in {hours}h {minutes}m")
+            bot.add_to_chat_queue(is_team, f"Next daily quest available in {_format_time_remaining(time_remaining)}")
         else:
             bot.add_to_chat_queue(is_team, "No daily quest available.")
         return
@@ -37,10 +42,13 @@ def daily_command(bot, is_team: bool, playername: str, chattext: str) -> None:
     
     req_text = ", ".join([f"{r['quantity']}x {r['name']}" for r in quest['requirements']])
     
+    time_remaining = quest_module.get_time_until_daily_reset(playername)
+    reset_text = f" | Resets in {_format_time_remaining(time_remaining)}" if time_remaining else ""
+
     if not has_items:
-        msg = f"[QUEST] {quest['title']}: {req_text} | Need {needs_qty}x {missing_item}, you have {has_qty} | Reward: ${quest['reward_money']:,} | Use @daily claim"
+        msg = f"[QUEST] {quest['title']}: {req_text} | Need {needs_qty}x {missing_item}, you have {has_qty} | Reward: ${quest['reward_money']:,}{reset_text} | Use @daily claim"
     else:
-        msg = f"[QUEST] {quest['title']}: {req_text} | ✓ Ready to claim! | Reward: ${quest['reward_money']:,} | Use @daily claim"
+        msg = f"[QUEST] {quest['title']}: {req_text} | ✓ Ready to claim! | Reward: ${quest['reward_money']:,}{reset_text} | Use @daily claim"
     
     bot.add_to_chat_queue(is_team, msg)
 

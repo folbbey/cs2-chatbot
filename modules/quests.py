@@ -80,6 +80,34 @@ class QuestModule:
                 return None  # Has active uncompleted quest
         finally:
             return_connection(conn)
+
+    def get_time_until_daily_reset(self, user_id):
+        """Get time remaining until the current daily quest window resets."""
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT assigned_at
+                    FROM daily_quests
+                    WHERE user_id = %s
+                    ORDER BY assigned_at DESC
+                    LIMIT 1
+                """, (user_id,))
+
+                result = cur.fetchone()
+
+                if not result:
+                    return None
+
+                time_elapsed = datetime.now() - result['assigned_at']
+                time_remaining = timedelta(hours=24) - time_elapsed
+
+                if time_remaining.total_seconds() <= 0:
+                    return None
+
+                return time_remaining
+        finally:
+            return_connection(conn)
     
     def check_requirements(self, user_id, requirements):
         """Check if user has all required items/fish."""
@@ -176,7 +204,13 @@ class QuestModule:
                 result = cur.fetchone()
                 
                 if result and result['completed']:
-                    return False, "Daily quest already completed. New quest in 24h."
+                    time_remaining = self.get_time_until_daily_reset(user_id)
+                    if time_remaining:
+                        total_seconds = int(time_remaining.total_seconds())
+                        hours = total_seconds // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        return False, f"Daily quest already completed. New quest in {hours}h {minutes}m."
+                    return False, "Daily quest already completed. New quest available now."
         finally:
             return_connection(conn)
         
