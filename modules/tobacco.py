@@ -62,8 +62,13 @@ class Tobacco:
         # Apply the effects of drinking the tobacco
         effect_descs = []
         for effect in tobacco_data.get("effects", []):
-            self.status_effects.add_effect(playername, effect)
-            effect_descs.append(self.status_effects.get_description(effect))
+            normalized_effect = effect.strip().lower()
+            result = self.status_effects.add_effect(playername, normalized_effect)
+            description = self.status_effects.get_description(normalized_effect)
+            if result is not True and description is None:
+                effect_descs.append(str(result))
+            elif description:
+                effect_descs.append(description)
         
         return f"You chuff a {tobacco_data['name']}. ({', '.join(effect_descs)})"
 

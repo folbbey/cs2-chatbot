@@ -44,7 +44,7 @@
         "description": "Pack a lip pillow and relax.",
         "price": 11.99,
         "effects": [
-            "fishing.case_rate_20"
+            "fishing.item_rate_40"
         ]
     }
 ]

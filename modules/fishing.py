@@ -22,7 +22,18 @@ class Fishing:
         fish_json_path = os.path.join(appdata_dir, "fish.json") if hasattr(sys, '_MEIPASS') else os.path.join("modules", "data", "fish.json")
         try:
             with open(fish_json_path, mode='r', encoding='utf-8') as file:
-                return json.load(file)
+                fish_data = json.load(file)
+                for item in fish_data:
+                    if item.get("type") != "fish":
+                        continue
+                    if item.get("description"):
+                        continue
+                    fish_name = item.get("name", "fish")
+                    if "crab" in fish_name.lower():
+                        item["description"] = f"You crack into the {fish_name}, buttery and rich with a salty ocean finish."
+                    else:
+                        item["description"] = f"You eat the {fish_name}. Fresh catch, solid meal."
+                return fish_data
         except FileNotFoundError:
             return []
 
@@ -130,9 +141,20 @@ class Fishing:
         
         # get fish around
         fish_around = []
+        minimum_rarity_index = rarities.index(minimum_rarity)
         for item in self.fish_data:
+            if item.get("type") == "item":
+                item_copy = item.copy()
+                item_rarity = item_copy.get("rarity", "Common")
+                item_rarity_index = rarities.index(item_rarity) if item_rarity in rarities else 0
+                if item_rarity_index < minimum_rarity_index:
+                    penalty_steps = minimum_rarity_index - item_rarity_index
+                    item_copy["catch_rate"] *= 0.5 ** penalty_steps
+                fish_around.append(item_copy)
+                continue
+
             if item["rarity"] == minimum_rarity or item["rarity"] in rarities[rarities.index(minimum_rarity):]:
-                fish_around.append(item)
+                fish_around.append(item.copy())
         
         # alter catch rate based on status effects
         effects = self.status_effects.get_effects(user_id)
@@ -146,8 +168,11 @@ class Fishing:
             if effect.get("module_id") == "fishing" and effect.get("effect_id").startswith("catch_rate"):
                 for item in fish_around:
                     item["catch_rate"] *= effect.get("mult", 1)
-            # case_rate effect
-            if effect.get("module_id") == "fishing" and effect.get("effect_id").startswith("case_rate"):
+            # item_rate / case_rate effect
+            if effect.get("module_id") == "fishing" and (
+                effect.get("effect_id").startswith("item_rate") or
+                effect.get("effect_id").startswith("case_rate")
+            ):
                 for item in fish_around:
                     if item["type"] == "item":
                         item["catch_rate"] *= effect.get("mult", 1)
@@ -241,16 +266,17 @@ class Fishing:
             
             fish = cursor.fetchone()
 
-        if not fish:
-            return "Your sack is empty." if not name else f"There were no '{name}' found in your sack."
+            if not fish:
+                return "Your sack is empty." if not name else f"There were no '{name}' found in your sack."
 
-        fish_id, name = fish
+            fish_id, name = fish
 
-        # Remove the fish from the database
-        cursor.execute("""
-            DELETE FROM caught_fish
-            WHERE id = %s
-        """, (fish_id,))
+            # Remove the fish from the database
+            cursor.execute("""
+                DELETE FROM caught_fish
+                WHERE id = %s
+            """, (fish_id,))
+
         # Retrieve the fish description from the fish data
         for fish_data in self.fish_data:
             if fish_data["name"].lower() == name.lower():
