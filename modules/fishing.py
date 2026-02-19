@@ -2,6 +2,7 @@ import random
 import json
 import os
 import sys
+from thefuzz import process, fuzz
 
 from util.database import DatabaseConnection
 from util.config import get_config_path
@@ -15,6 +16,7 @@ class Fishing:
         self.fish_data = self.load_fish_data()
         self.inventory: InventoryModule = module_registry.get_module("inventory")  # Retrieve the Inventory module from the module registry
         self.status_effects: StatusEffectsModule = module_registry.get_module("status_effects")  # Retrieve the StatusEffects module from the module registry
+        self.economy = module_registry.get_module("economy")
 
     def load_fish_data(self):
         """Load fish data from a JSON file."""
@@ -196,6 +198,17 @@ class Fishing:
                         if effect.get("module_id") == "fishing" and effect.get("effect_id").startswith("price"):
                             price *= effect.get("mult", 1)
                     price = round(price, 2)
+
+                    if self.is_autosell_enabled(user_id, item["name"]):
+                        new_balance = self.economy.add_balance(user_id, float(price))
+                        return {
+                            "name": item["name"],
+                            "type": "autosold_fish",
+                            "weight": weight,
+                            "price": price,
+                            "balance": new_balance
+                        }
+
                     # Add the fish to the database
                     self.add_fish_to_db(user_id, item["name"], weight, price)
                     return {"name": item["name"], "type": "fish", "weight": weight, "price": price}
@@ -214,6 +227,133 @@ class Fishing:
                 VALUES (%s, %s, %s, %s)
             """, (user_id, name, weight, price))
         return f"You caught a {name} weighing {weight} lbs worth ${price}!"
+
+    def _get_all_fish_names(self):
+        return [item["name"] for item in self.fish_data if item.get("type") == "fish"]
+
+    def resolve_fish_name(self, fish_name):
+        """Resolve a fish name to canonical fish data name using exact then fuzzy matching."""
+        if not fish_name:
+            return None
+
+        fish_name = fish_name.strip()
+        fish_names = self._get_all_fish_names()
+        if not fish_names:
+            return None
+
+        exact = next((name for name in fish_names if name.lower() == fish_name.lower()), None)
+        if exact:
+            return exact
+
+        best_match = process.extractOne(fish_name, fish_names, scorer=fuzz.ratio)
+        if best_match and best_match[1] >= 80:
+            return best_match[0]
+
+        return None
+
+    def add_autosell_fish(self, user_id, fish_name):
+        """Add a fish to a user's autosell list and immediately sell matching fish in sack."""
+        resolved_fish_name = self.resolve_fish_name(fish_name)
+        if not resolved_fish_name:
+            return False, f"'{fish_name}' is not a valid fish. Only fish can be autosold."
+
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                INSERT INTO autosell_fish (user_id, fish_name)
+                VALUES (%s, %s)
+                ON CONFLICT (user_id, fish_name) DO NOTHING
+            """, (user_id, resolved_fish_name))
+            added = cursor.rowcount > 0
+
+        sold_count, sold_total, _ = self.sell_matching_fish_in_sack(user_id, resolved_fish_name)
+
+        if added and sold_count > 0:
+            return True, f"Enabled autosell for {resolved_fish_name}. Sold {sold_count} for ${sold_total:.2f}."
+        if added:
+            return True, f"Enabled autosell for {resolved_fish_name}."
+        if sold_count > 0:
+            return True, f"{resolved_fish_name} is already autosold. Sold {sold_count} for ${sold_total:.2f}."
+
+        return True, f"{resolved_fish_name} is already autosold."
+
+    def remove_autosell_fish(self, user_id, fish_name):
+        """Remove a fish from a user's autosell list."""
+        resolved_fish_name = self.resolve_fish_name(fish_name)
+        if not resolved_fish_name:
+            return False, f"'{fish_name}' is not a valid fish."
+
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                DELETE FROM autosell_fish
+                WHERE user_id = %s AND fish_name = %s
+            """, (user_id, resolved_fish_name))
+            removed = cursor.rowcount > 0
+
+        if not removed:
+            return False, f"{resolved_fish_name} is not in your autosell list."
+
+        return True, f"Disabled autosell for {resolved_fish_name}."
+
+    def list_autosell_fish(self, user_id):
+        """List autosell fish for a user."""
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT fish_name
+                FROM autosell_fish
+                WHERE user_id = %s
+                ORDER BY fish_name ASC
+            """, (user_id,))
+            rows = cursor.fetchall()
+        return [row[0] for row in rows]
+
+    def clear_autosell_fish(self, user_id):
+        """Clear all autosell fish preferences for a user."""
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                DELETE FROM autosell_fish
+                WHERE user_id = %s
+            """, (user_id,))
+            removed_count = cursor.rowcount
+
+        if removed_count <= 0:
+            return False, "Your autosell list is already empty."
+
+        return True, f"Cleared autosell list ({removed_count} removed)."
+
+    def is_autosell_enabled(self, user_id, fish_name):
+        """Check whether autosell is enabled for a fish for this user."""
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT 1
+                FROM autosell_fish
+                WHERE user_id = %s AND LOWER(fish_name) = LOWER(%s)
+                LIMIT 1
+            """, (user_id, fish_name))
+            return cursor.fetchone() is not None
+
+    def sell_matching_fish_in_sack(self, user_id, fish_name):
+        """Sell all non-bait fish matching a specific name in the user's sack."""
+        with DatabaseConnection() as cursor:
+            cursor.execute("""
+                SELECT price
+                FROM caught_fish
+                WHERE user_id = %s AND LOWER(name) = LOWER(%s) AND bait = 0
+            """, (user_id, fish_name))
+            rows = cursor.fetchall()
+
+            if not rows:
+                return 0, 0.0, self.economy.get_balance(user_id)
+
+            total_earnings = float(sum(float(row[0]) for row in rows))
+            sold_count = len(rows)
+
+            cursor.execute("""
+                DELETE FROM caught_fish
+                WHERE user_id = %s AND LOWER(name) = LOWER(%s) AND bait = 0
+            """, (user_id, fish_name))
+
+        new_balance = self.economy.add_balance(user_id, total_earnings)
+        return sold_count, total_earnings, new_balance
 
     def get_sack(self, user_id):
         """Retrieve all fish caught by the user."""
@@ -293,12 +433,6 @@ class Fishing:
         :return: The total earnings or an error message if no fish is found.
         """
 
-        # Check if the bot has the economy module loaded to its modules
-        try:
-            economy = module_registry.get_module("economy")
-        except ValueError:
-            return "Economy module not found."
-
         with DatabaseConnection() as cursor:
 
             if name and name.strip().lower() == "all":
@@ -323,7 +457,7 @@ class Fishing:
                     AND bait = 0
                 """, (user_id,))
                 # Add the earnings to the user's balance
-                new_balance = economy.add_balance(user_id, total_earnings)
+                new_balance = self.economy.add_balance(user_id, total_earnings)
 
                 return f"You sold all your fish for a total of ${total_earnings:.2f}! Your new balance is ${new_balance:.2f}."
             else:
@@ -361,7 +495,7 @@ class Fishing:
                     WHERE id = %s
                 """, (fish_id,))
                 # Add the earnings to the user's balance
-                new_balance = economy.add_balance(user_id, float(price))
+                new_balance = self.economy.add_balance(user_id, float(price))
                 
                 return f"You sold a {name} for ${price:.2f}! Your new balance is ${new_balance:.2f}."
 
