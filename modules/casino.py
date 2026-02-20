@@ -32,15 +32,21 @@ class Casino:
         # Get cutoff from status effects
         status_effects = self.status_effects.get_effects(user_id)
         cutoff = 0.5
+        has_luck_effect = False
         for effect in status_effects:
-            if effect["effect_id"] == "luck":
-                cutoff *= effect["mult"]
+            if effect.get("module_id") == "casino" and effect.get("effect_id", "").startswith("luck"):
+                has_luck_effect = True
+                cutoff += effect["mult"] - 1
+
+        cutoff = max(0.0, min(1.0, cutoff))
+        chance_text = f"{(cutoff * 100):.1f}".rstrip("0").rstrip(".")
+        chance_suffix = f" (Luck-adjusted win chance: {chance_text}%.)" if has_luck_effect else ""
         outcome = "heads" if random.random() < cutoff else "tails"
         if outcome == "heads":
             # User wins, double the amount
             self.economy.add_balance(user_id, amount)
-            return f"You flipped heads and won ${amount:.2f}! Your new balance is ${self.economy.get_balance(user_id):.2f}."
+            return f"You flipped heads and won ${amount:.2f}! Your new balance is ${self.economy.get_balance(user_id):.2f}.{chance_suffix}"
         else:
             # User loses, deduct the amount
             self.economy.deduct_balance(user_id, amount)
-            return f"You flipped tails and lost ${amount:.2f}. Your new balance is ${self.economy.get_balance(user_id):.2f}."
+            return f"You flipped tails and lost ${amount:.2f}. Your new balance is ${self.economy.get_balance(user_id):.2f}.{chance_suffix}"
