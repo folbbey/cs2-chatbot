@@ -20,10 +20,10 @@ class Tobacco:
         Load tobacco data from the configuration file.
         """
         appdata_dir = os.path.dirname(get_config_path())
-        tobacco_json_path = os.path.join(appdata_dir, "tobacco.json") if hasattr(sys, '_MEIPASS') else os.path.join("modules", "data", "tobacco.json")
+        tobacco_json_path = os.path.join(appdata_dir, "shop.json") if hasattr(sys, '_MEIPASS') else os.path.join("modules", "data", "shop.json")
         try:
             with open(tobacco_json_path, 'r', encoding='utf-8') as file:
-                return json.load(file)
+                return json.load(file)['Tobacco']
         except FileNotFoundError:
             return []
 
@@ -61,7 +61,7 @@ class Tobacco:
         
         # Apply the effects of drinking the tobacco
         effect_descs = []
-        for effect in tobacco_data.get("effects", []):
+        for effect in tobacco_data['attributes'].get("effects", []):
             self.status_effects.add_effect(playername, effect)
             effect_descs.append(self.status_effects.get_description(effect))
         
@@ -83,7 +83,7 @@ class Tobacco:
             self.inventory.remove_item(playername, tobacco_data["name"], 1)
             
             # Apply the effects of drinking the tobacco
-            for effect in tobacco_data.get("effects", []):
+            for effect in tobacco_data['attributes'].get("effects", []):
                 self.status_effects.add_effect(playername, effect)
                 effect_descs.append(self.status_effects.get_description(effect))
 

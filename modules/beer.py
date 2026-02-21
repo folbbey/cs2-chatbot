@@ -20,10 +20,10 @@ class Beer:
         Load drinking data from the configuration file.
         """
         appdata_dir = os.path.dirname(get_config_path())
-        beer_json_path = os.path.join(appdata_dir, "beer.json") if hasattr(sys, '_MEIPASS') else os.path.join("modules", "data", "beer.json")
+        beer_json_path = os.path.join(appdata_dir, "shop.json") if hasattr(sys, '_MEIPASS') else os.path.join("modules", "data", "shop.json")
         try:
             with open(beer_json_path, 'r', encoding='utf-8') as file:
-                return json.load(file)
+                return json.load(file)['Beer']
         except FileNotFoundError:
             return []
 
@@ -61,7 +61,7 @@ class Beer:
         
         # Apply the effects of drinking the beer
         effect_descs = []
-        for effect in beer_data.get("effects", []):
+        for effect in beer_data['attributes'].get("effects", []):
             self.status_effects.add_effect(playername, effect)
             effect_descs.append(self.status_effects.get_description(effect))
         
@@ -79,7 +79,7 @@ class Beer:
             self.inventory.remove_item(playername, beer_data["name"], 1)
             
             # Apply the effects of drinking the beer
-            for effect in beer_data.get("effects", []):
+            for effect in beer_data['attributes'].get("effects", []):
                 self.status_effects.add_effect(playername, effect)
                 effect_descs.append(self.status_effects.get_description(effect))
             
