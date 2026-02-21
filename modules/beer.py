@@ -66,4 +66,21 @@ class Beer:
             effect_descs.append(self.status_effects.get_description(effect))
         
         return f"You drink a {beer_data['name']}. ({', '.join(effect_descs)})"
+    
 
+    def drink_all_beer(self, playername, beers):
+
+        effect_descs = []
+        for beer in beers:
+            beer = beer[0]
+            beer_data = self.find_beer(beer)
+            
+            # Remove the beer from the inventory
+            self.inventory.remove_item(playername, beer_data["name"], 1)
+            
+            # Apply the effects of drinking the beer
+            for effect in beer_data.get("effects", []):
+                self.status_effects.add_effect(playername, effect)
+                effect_descs.append(self.status_effects.get_description(effect))
+            
+        return f"You drink all your beers. ({', '.join(effect_descs)})"

@@ -62,13 +62,30 @@ class Tobacco:
         # Apply the effects of drinking the tobacco
         effect_descs = []
         for effect in tobacco_data.get("effects", []):
-            normalized_effect = effect.strip().lower()
-            result = self.status_effects.add_effect(playername, normalized_effect)
-            description = self.status_effects.get_description(normalized_effect)
-            if result is not True and description is None:
-                effect_descs.append(str(result))
-            elif description:
-                effect_descs.append(description)
+            self.status_effects.add_effect(playername, effect)
+            effect_descs.append(self.status_effects.get_description(effect))
         
         return f"You chuff a {tobacco_data['name']}. ({', '.join(effect_descs)})"
+    
+    def smoke_all_tobacco(self, playername, tobbaco_list):
+        """
+        Simulate smoking tobacco
+        Smokes all tobacco in player inventory
+        """
+        effect_descs = []
+        for tobacco in tobbaco_list:
+            tobacco = tobacco[0]
+            tobacco_data = self.find_tobacco(tobacco)
+            if tobacco_data is None:
+                return f"Tobacco '{tobacco}' not found."
+            
+            # Remove the tobacco from the inventory
+            self.inventory.remove_item(playername, tobacco_data["name"], 1)
+            
+            # Apply the effects of drinking the tobacco
+            for effect in tobacco_data.get("effects", []):
+                self.status_effects.add_effect(playername, effect)
+                effect_descs.append(self.status_effects.get_description(effect))
+
+        return f"You chuff all your tobacco. ({', '.join(effect_descs)})"
 
